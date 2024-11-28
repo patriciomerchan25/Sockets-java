@@ -1,16 +1,33 @@
 package ups.edu.ec;
 
+import javax.net.ssl.*;
 import java.io.*;
 import java.net.*;
-import java.util.*;
+import java.security.KeyStore;
+import java.util.*;;
 
 public class ChatServer {
     private static final int PORT = 12345;
     private static Set<PrintWriter> clientWriters = new HashSet<>();
 
     public static void main(String[] args) throws Exception {
-        System.out.println("Chat server started...");
-        ServerSocket serverSocket = new ServerSocket(PORT);
+        System.out.println("Chat server iniciando...");
+        //ServerSocket serverSocket = new ServerSocket(PORT);
+
+        KeyStore keyStore = KeyStore.getInstance("JKS");
+        keyStore.load(new FileInputStream("chatserver.jks"), "hola_321".toCharArray());
+        
+        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance("SunX509");
+        keyManagerFactory.init(keyStore, "hola_321".toCharArray());
+
+         // inicia el SSL Context
+         SSLContext sslContext = SSLContext.getInstance("TLS");
+         sslContext.init(keyManagerFactory.getKeyManagers(), null, null);
+
+         // crea el SSL server socket
+        SSLServerSocketFactory sslServerSocketFactory = sslContext.getServerSocketFactory();
+        SSLServerSocket serverSocket = (SSLServerSocket) sslServerSocketFactory.createServerSocket(PORT);
+
         try {
             while (true) {
                 new ClientHandler(serverSocket.accept()).start();
@@ -46,7 +63,7 @@ public class ChatServer {
                     }
                 }
             } catch (IOException e) {
-                System.out.println("Error handling client: " + e);
+                System.out.println("Manejo de errores del cliente: " + e);
             } finally {
                 try {
                     socket.close();

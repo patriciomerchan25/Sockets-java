@@ -1,9 +1,10 @@
 package ups.edu.ec;
 
+import javax.net.ssl.*;
 import javax.swing.*;
-//import java.awt.event.*;
 import java.io.*;
 import java.net.*;
+import java.security.KeyStore;
 
 public class ChatClientGUI extends JFrame {
     private static final String SERVER_ADDRESS = "localhost";
@@ -123,14 +124,41 @@ public class ChatClientGUI extends JFrame {
     }
 
     private void btnConectarActionPerformed(java.awt.event.ActionEvent evt) {
-        try {
-            socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
-            out = new PrintWriter(socket.getOutputStream(), true);
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            lbEstado.setText("Conectado");
-            new Thread(new IncomingReader()).start();
-        } catch (IOException e) {
-            e.printStackTrace();
+        connectToServer();
+    }
+    private void connectToServer() {
+        while (true) {
+            try {
+                // Load the truststore containing the server certificate
+                KeyStore trustStore = KeyStore.getInstance("JKS");
+                trustStore.load(new FileInputStream("chatserver.jks"), "hola_321".toCharArray());
+
+                // Initialize the trust manager factory with the truststore
+                TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance("SunX509");
+                trustManagerFactory.init(trustStore);
+
+                // Initialize the SSL context
+                SSLContext sslContext = SSLContext.getInstance("TLS");
+                sslContext.init(null, trustManagerFactory.getTrustManagers(), null);
+
+                // Create the SSL socket
+                SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
+                socket = (SSLSocket) sslSocketFactory.createSocket(SERVER_ADDRESS, SERVER_PORT);
+
+                out = new PrintWriter(socket.getOutputStream(), true);
+                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                lbEstado.setText("Conectado");
+                new Thread(new IncomingReader()).start();
+                break; // Exit the loop if connection is successful
+            } catch (Exception e) {
+                e.printStackTrace();
+                lbEstado.setText("Desconectado. Reintentando...");
+                try {
+                    Thread.sleep(5000); // Wait for 5 seconds before retrying
+                } catch (InterruptedException ie) {
+                    ie.printStackTrace();
+                }
+            }
         }
     }
 
