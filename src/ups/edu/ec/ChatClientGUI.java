@@ -4,10 +4,15 @@ import javax.swing.*;
 //import java.awt.event.*;
 import java.io.*;
 import java.net.*;
+//import java.security.*;
+import javax.crypto.*;
+import javax.crypto.spec.SecretKeySpec;
+import java.util.Base64;
 
 public class ChatClientGUI extends JFrame {
     private static final String SERVER_ADDRESS = "localhost";
     private static final int SERVER_PORT = 12345;
+    private static final String SECRET_KEY = "1234567890123456"; // 16-byte key for AES
     private PrintWriter out;
     private Socket socket;
     private BufferedReader in;
@@ -123,21 +128,44 @@ public class ChatClientGUI extends JFrame {
     }
 
     private void btnConectarActionPerformed(java.awt.event.ActionEvent evt) {
-        try {
-            socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
-            out = new PrintWriter(socket.getOutputStream(), true);
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            lbEstado.setText("Conectado");
-            new Thread(new IncomingReader()).start();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+      connectToServer();
     }
+    private void connectToServer() {
+        while (true) {
+            try {
+                socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
+                out = new PrintWriter(socket.getOutputStream(), true);
+                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                lbEstado.setText("Conectado");
+
+                // Send the client name as the first message
+                String encryptedName = encrypt(txtNombreUsuario.getText(), SECRET_KEY);
+                out.println(encryptedName);
+
+
+                new Thread(new IncomingReader()).start();
+                break; // Exit the loop if connection is successful
+            } catch (Exception e) {
+                e.printStackTrace();
+                lbEstado.setText("Reconexión...");
+                try {
+                    Thread.sleep(5000); // Wait for 5 seconds before retrying
+                } catch (InterruptedException ie) {
+                    ie.printStackTrace();
+                }
+            }
+        }
+    } 
 
     private void btnEnviarActionPerformed(java.awt.event.ActionEvent evt) {
         if (out != null) {
-            out.println(txtNombreUsuario.getText() + ": " + txtEnviar.getText());
-            txtEnviar.setText("");
+            try {
+                String encryptedMessage = encrypt(txtNombreUsuario.getText() + ": " + txtEnviar.getText(), SECRET_KEY);
+                out.println(encryptedMessage);
+                txtEnviar.setText("");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -146,11 +174,42 @@ public class ChatClientGUI extends JFrame {
             try {
                 String message;
                 while ((message = in.readLine()) != null) {
-                    txtAreaMS.append(message + "\n");
+                    String decryptedMessage = decrypt(message, SECRET_KEY);
+                    txtAreaMS.append(decryptedMessage + "\n");
                 }
             } catch (IOException e) {
                 e.printStackTrace();
+                lbEstado.setText("Reconexión ...");
+                connectToServer(); // Attempt to reconnect
             }
+        }
+    }
+
+    
+
+    private String encrypt(String data, String key) {
+        try {
+            Cipher cipher = Cipher.getInstance("AES");
+            SecretKeySpec secretKey = new SecretKeySpec(key.getBytes(), "AES");
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey);
+            byte[] encryptedData = cipher.doFinal(data.getBytes());
+            return Base64.getEncoder().encodeToString(encryptedData);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private String decrypt(String data, String key) {
+        try {
+            Cipher cipher = Cipher.getInstance("AES");
+            SecretKeySpec secretKey = new SecretKeySpec(key.getBytes(), "AES");
+            cipher.init(Cipher.DECRYPT_MODE, secretKey);
+            byte[] decryptedData = Base64.getDecoder().decode(data);
+            return new String(cipher.doFinal(decryptedData));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
         }
     }
 
