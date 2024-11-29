@@ -42,7 +42,8 @@ public class ChatServer {
                     clientHandlers.add(this);
                 }
 
-                // Read the first message to get the client's name
+                 
+                  // Lee el primer mensaje para obtener el nombre del cliente.
                 String encryptedName = in.readLine();
                 try {
                     clientName = decrypt(encryptedName, SECRET_KEY);
