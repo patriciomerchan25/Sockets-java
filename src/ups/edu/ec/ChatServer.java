@@ -10,7 +10,7 @@ import javax.crypto.spec.SecretKeySpec;
 public class ChatServer {
     private static final int PORT = 12345;
     private static Set<ClientHandler> clientHandlers = new HashSet<>(); // Declarar clientHandlers
-    private static final String SECRET_KEY ="1234567890123456"; //16-byte key for AES
+    private static final String SECRET_KEY ="1234567890123456"; //Clave de 16 bytes para AES
 
     public static void main(String[] args) throws Exception {
         System.out.println("Chat server iniciando...");
@@ -56,7 +56,7 @@ public class ChatServer {
                     System.out.println("Mensaje cifrado recibido de " + clientName);
                     synchronized (clientHandlers) {
                         for (ClientHandler handler : clientHandlers) {
-                            handler.out.println(message); // Send the encrypted message to other clients
+                            handler.out.println(message); // Enviar el mensaje cifrado a otros clientes
                         }
                     }
                 }

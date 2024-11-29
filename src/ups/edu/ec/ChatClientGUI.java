@@ -138,18 +138,18 @@ public class ChatClientGUI extends JFrame {
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 lbEstado.setText("Conectado");
 
-                // Send the client name as the first message
+                // Enviar el nombre del cliente como primer mensaje
                 String encryptedName = encrypt(txtNombreUsuario.getText(), SECRET_KEY);
                 out.println(encryptedName);
 
 
                 new Thread(new IncomingReader()).start();
-                break; // Exit the loop if connection is successful
+                break; // Sale del bucle si la conexión es exitosa
             } catch (Exception e) {
                 e.printStackTrace();
                 lbEstado.setText("Reconexión...");
                 try {
-                    Thread.sleep(5000); // Wait for 5 seconds before retrying
+                    Thread.sleep(5000); // Espere 5 segundos antes de volver a intentarlo
                 } catch (InterruptedException ie) {
                     ie.printStackTrace();
                 }
@@ -180,7 +180,7 @@ public class ChatClientGUI extends JFrame {
             } catch (IOException e) {
                 e.printStackTrace();
                 lbEstado.setText("Reconexión ...");
-                connectToServer(); // Attempt to reconnect
+                connectToServer(); // Intenta volver a conectarte cuando se pierde la conexión
             }
         }
     }
