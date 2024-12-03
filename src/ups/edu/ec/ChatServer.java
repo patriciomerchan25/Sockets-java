@@ -14,7 +14,7 @@ public class ChatServer {
 
     public static void main(String[] args) throws Exception {
         System.out.println("Chat server iniciando...");
-        ServerSocket serverSocket = new ServerSocket(PORT);
+        ServerSocket serverSocket = new ServerSocket(PORT); //Aceptar conexiones entrantes
         try {
             while (true) {
                 new ClientHandler(serverSocket.accept()).start();

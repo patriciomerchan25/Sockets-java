@@ -12,7 +12,7 @@ import java.util.Base64;
 public class ChatClientGUI extends JFrame {
     private static final String SERVER_ADDRESS = "localhost";
     private static final int SERVER_PORT = 12345;
-    private static final String SECRET_KEY = "1234567890123456"; // 16-byte key for AES
+    private static final String SECRET_KEY = "1234567890123456"; // Clave de 16 bytes para AES
     private PrintWriter out;
     private Socket socket;
     private BufferedReader in;
