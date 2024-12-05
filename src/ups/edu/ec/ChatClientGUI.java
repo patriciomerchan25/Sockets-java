@@ -9,13 +9,22 @@ import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
 
+import com.rabbitmq.client.*;
+
+import java.sql.*;
+
 public class ChatClientGUI extends JFrame {
     private static final String SERVER_ADDRESS = "localhost";
     private static final int SERVER_PORT = 12345;
     private static final String SECRET_KEY = "1234567890123456"; // Clave de 16 bytes para AES
+    private static final String QUEUE_NAME = "chat_queue";
+    private static final String DB_URL = "jdbc:postgresql://localhost:5432/chatdb";
+    private static final String DB_USER = "chat_user";
+    private static final String DB_PASSWORD = "12345db";
     private PrintWriter out;
     private Socket socket;
     private BufferedReader in;
+    private Channel channel;
 
     // Variables declaration - do not modify
     private javax.swing.JButton btnConectar;
@@ -142,8 +151,20 @@ public class ChatClientGUI extends JFrame {
                 String encryptedName = encrypt(txtNombreUsuario.getText(), SECRET_KEY);
                 out.println(encryptedName);
 
+                //Configurar la conexión RabbitMQ
+                ConnectionFactory factory = new ConnectionFactory();
+                factory.setHost("localhost");
+                com.rabbitmq.client.Connection rabbitConnection = factory.newConnection();
+                channel = rabbitConnection.createChannel();
+                channel.queueDeclare(QUEUE_NAME, true, false, false, null);
 
+                //Empiece a consumir mensajes de RabbitMQ
                 new Thread(new IncomingReader()).start();
+
+                //Recuperar mensajes de la base de datos
+                fetchMessagesFromDatabase();
+
+
                 break; // Sale del bucle si la conexión es exitosa
             } catch (Exception e) {
                 e.printStackTrace();
@@ -177,6 +198,18 @@ public class ChatClientGUI extends JFrame {
                     String decryptedMessage = decrypt(message, SECRET_KEY);
                     txtAreaMS.append(decryptedMessage + "\n");
                 }
+
+                //Consumir mensajes de RabbitMQ
+                channel.basicConsume(QUEUE_NAME, true, new DefaultConsumer(channel) {
+                    @Override
+                    public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException{
+                        String message = new String(body, "UTF-8");
+                        String decryptedMessage = decrypt(message, SECRET_KEY);
+                        txtAreaMS.append(decryptedMessage + "\n");
+                    }
+                });
+
+
             } catch (IOException e) {
                 e.printStackTrace();
                 lbEstado.setText("Reconexión ...");
@@ -210,6 +243,23 @@ public class ChatClientGUI extends JFrame {
         } catch (Exception e) {
             e.printStackTrace();
             return null;
+        }
+    }
+
+    private void fetchMessagesFromDatabase() {
+        try (java.sql.Connection dbConnection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+            String sql = "SELECT sender, content FROM messages WHERE status = 'unread'";
+            try (Statement stmt = dbConnection.createStatement();
+                 ResultSet rs = stmt.executeQuery(sql)) {
+                while (rs.next()) {
+                    String sender = rs.getString("sender");
+                    String content = rs.getString("content");
+                    String decryptedMessage = decrypt(content, SECRET_KEY);
+                    txtAreaMS.append(sender + ": " + decryptedMessage + "\n");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 
